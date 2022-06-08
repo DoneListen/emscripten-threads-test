@@ -1,49 +1,61 @@
+// Copyright 2019 The Emscripten Authors.  All rights reserved.
+// Emscripten is available under two separate licenses, the MIT license and the
+// University of Illinois/NCSA Open Source License.  Both these licenses can be
+// found in the LICENSE file.
 
-#include <assert.h>
-#include <emscripten/emscripten.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <emscripten.h>
+#include <emscripten/fetch.h>
 #include <stdio.h>
 #include <string.h>
-#include <emscripten/threading.h>
-#include <emscripten/fetch.h>
-void Sleep(double msecs)
-{
-	double t1 = emscripten_get_now();
-	emscripten_thread_sleep(msecs);
-	double t2 = emscripten_get_now();
-	printf("emscripten_thread_sleep() slept for %f msecs.\n", t2 - t1);
 
-	assert(t2 - t1 >= 0.9 * msecs); // Should have slept ~ the requested time.
-}
-
-void *thread_main(void *arg)
+static void *thread_start(void *arg)
 {
-	while (1)
+	for (int i = 0; i < 10000; i++)
 	{
-		char* strURL = "https://webst03.is.autonavi.com/appmaptile?style=6&x=1637&y=815&z=11";
-		emscripten_fetch_attr_t attr;
-		emscripten_fetch_attr_init(&attr);
-		strcpy(attr.requestMethod, "GET");
-		attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS/* | EMSCRIPTEN_FETCH_REPLACE*/;
-		emscripten_fetch_t* fetch = emscripten_fetch(&attr, strURL); // Blocks here until the operation is complete.
-		if (fetch->status == 200)
-		{
-			//eErrorType = 1;
-		}
-		else
-		{
-			//eErrorType = 0;
-		}
-		emscripten_fetch_close(fetch);
+		//printf("thread_start\n");
+		char* strURL = "https://webst03.is.autonavi.com/appmaptile?style=6&x=1637&y=815&z=11"; 
+	    emscripten_fetch_attr_t attr;
+	    emscripten_fetch_attr_init(&attr);
+	    strcpy(attr.requestMethod, "GET");
+	    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS/* | EMSCRIPTEN_FETCH_REPLACE*/;
+	    emscripten_fetch_t* fetch = emscripten_fetch(&attr, strURL); // Blocks here until the operation is complete.
+	    if (fetch->status == 200)
+	    {
+	    	//eErrorType = 1;
+	    }
+	    else
+	    {
+	    	//eErrorType = 0;
+	    }
+	    emscripten_fetch_close(fetch);
 	}
-	emscripten_force_exit(0);
-	return NULL;
+	printf("thread_start\n");
+
+	//emscripten_force_exit(0);
+	/*char* buffer = (char*)malloc(64 * 1024 * 1024);
+	assert(buffer);
+	*buffer = 42;
+	pthread_exit((void*)buffer);*/
 }
 
 int main()
 {
-	pthread_t thread;
-	pthread_create(&thread, NULL, thread_main, NULL);
-	emscripten_exit_with_live_runtime();
-	__builtin_trap();
+  printf("prep\n");
+  pthread_t thr;
+
+  printf("start\n");
+
+  printf("create\n");
+  int s = pthread_create(&thr, NULL, thread_start, (void*)NULL);
+  assert(s == 0);
+  void* result = NULL;
+  printf("join\n");
+  s = pthread_join(thr, &result);
+  return 0;
 }
+
